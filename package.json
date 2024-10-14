@@ -1,0 +1,13 @@
+{
+  "name": "shortlink",
+  "version": "1.0.0",
+  "description": "URL shortener",
+  "main": "short.js",
+  "scripts": {
+    "start": "node short.js"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "fs": "0.0.1-security"
+  }
+}
