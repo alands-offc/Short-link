@@ -1,17 +1,24 @@
 const express = require('express');
-const fs = require('fs');
+const mongoose = require('mongoose');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-function readDB() {
-  return JSON.parse(fs.readFileSync('./db.json', 'utf8'));
-}
+const mongoURI = 'mongodb+srv://alanqwerty:qwerty123@cluster0.cjvb1q8.mongodb.net/mydatabase?retryWrites=true&w=majority';
 
-function writeDB(data) {
-  fs.writeFileSync('./db.json', JSON.stringify(data, null, 2));
-}
+// Koneksi ke MongoDB
+mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => console.error('MongoDB connection error:', err));
+
+// Definisikan schema untuk URL Shortener
+const urlSchema = new mongoose.Schema({
+  customId: { type: String, unique: true, required: true },
+  eurl: { type: String, required: true },
+});
+
+const Url = mongoose.model('Url', urlSchema);
 
 app.get('/', (req, res) => {
   res.send(`
@@ -81,42 +88,54 @@ app.get('/', (req, res) => {
   `);
 });
 
-app.get('/:id', (req, res) => {
-  const db = readDB();
-  const id = req.params.id;
-  
-  if (db[id]) {
-    res.redirect(db[id].eurl);
-  } else {
-    res.status(404).send('Shortlink not found');
+app.get('/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const urlData = await Url.findOne({ customId: id });
+    if (urlData) {
+      res.redirect(urlData.eurl);
+    } else {
+      res.status(404).send('Shortlink not found');
+    }
+  } catch (error) {
+    console.error('Error redirecting:', error);
+    res.status(500).send('Internal Server Error');
   }
 });
 
-app.post('/create', (req, res) => {
+app.post('/create', async (req, res) => {
   const { url, customId } = req.body;
-  const db = readDB();
-  let id;
 
-  if (customId) {
-    if (db[customId]) {
-      return res.json({ error: 'Custom URL already exists' });
+  try {
+    if (!url) {
+      return res.status(400).json({ error: 'URL is required' });
     }
-    id = customId;
-  } else {
-    id = Math.random().toString(36).substr(2, 6);
-    while (db[id]) {
+
+    let id = customId;
+
+    if (!id) {
       id = Math.random().toString(36).substr(2, 6);
+      while (await Url.findOne({ customId: id })) {
+        id = Math.random().toString(36).substr(2, 6);
+      }
+    } else {
+      const existing = await Url.findOne({ customId: id });
+      if (existing) {
+        return res.status(400).json({ error: 'Custom URL already exists' });
+      }
     }
+
+    const newUrl = new Url({ customId: id, eurl: url });
+    await newUrl.save();
+
+    res.json({ shortUrl: `https://s.alxzy.xyz/${id}` });
+  } catch (error) {
+    console.error('Error creating shortlink:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
-
-  db[id] = { eurl: url };
-  writeDB(db);
-
-  res.json({ shortUrl: `https://s
-  .alxzy.xyz/${id}` });
 });
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
-
