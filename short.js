@@ -5,8 +5,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-const mongoURI = 'mongodb+srv://alanqwerty:qwerty123@cluster0.cjvb1q8.mongodb.net/mydatabase?retryWrites=true&w=majority';
-
+const mongoURI = "mongodb+srv://gggwbjir:gggwbjir123@cl.s49uz.mongodb.net/?retryWrites=true&w=majority&appName=shortlinkapi";
 // Koneksi ke MongoDB
 mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('MongoDB connected'))
